@@ -55,7 +55,6 @@ func New(params *ServerParams) *Server {
 	registry.MustRegister(system_collector)
 	registry.MustRegister(container_collector)
 	registry.MustRegister(network_collector)
-	
 
 	collectors := []collectors.Collector{
 		system_collector,
@@ -92,7 +91,7 @@ func New(params *ServerParams) *Server {
 			len(collectors),
 			params.Config.Containers.DockerEnabled,
 			params.Config.Containers.PodmanEnabled,
-			params.Config.Metrics.CollectionInterval,
+			params.Config.Metrics.CollectionInterval.Duration,
 		)
 		w.Write([]byte(info))
 	})
@@ -100,8 +99,8 @@ func New(params *ServerParams) *Server {
 	httpServer := &http.Server{
 		Addr:         params.Config.Server.Port,
 		Handler:      mux,
-		ReadTimeout:  params.Config.Server.ReadTimeout,
-		WriteTimeout: params.Config.Server.WriteTimeout,
+		ReadTimeout:  params.Config.Server.ReadTimeout.Duration,
+		WriteTimeout: params.Config.Server.WriteTimeout.Duration,
 	}
 
 	return &Server{
@@ -120,8 +119,8 @@ func (s *Server) Start(ctx context.Context) error {
 
 	s.logger.Info("Starting HTTP server",
 		zap.String("addr", s.httpServer.Addr),
-		zap.Duration("read_timeout", s.config.Server.ReadTimeout),
-		zap.Duration("write_timeout", s.config.Server.WriteTimeout),
+		zap.Duration("read_timeout", s.config.Server.ReadTimeout.Duration),
+		zap.Duration("write_timeout", s.config.Server.WriteTimeout.Duration),
 	)
 
 	// Start HTTP server
@@ -137,7 +136,7 @@ func (s *Server) Start(ctx context.Context) error {
 func (s *Server) Stop(ctx context.Context) error {
 	s.logger.Info("Shutting down HTTP server")
 
-	shutdownCtx, cancel := context.WithTimeout(ctx, s.config.Server.ShutdownTimeout)
+	shutdownCtx, cancel := context.WithTimeout(ctx, s.config.Server.ShutdownTimeout.Duration)
 	defer cancel()
 
 	return s.httpServer.Shutdown(shutdownCtx)
@@ -146,11 +145,11 @@ func (s *Server) Stop(ctx context.Context) error {
 // startMetricCollection starts the metric collection
 // It collects metrics at the specified interval
 func (s *Server) startMetricCollection(ctx context.Context) {
-	ticker := time.NewTicker(s.config.Metrics.CollectionInterval)
+	ticker := time.NewTicker(s.config.Metrics.CollectionInterval.Duration)
 	defer ticker.Stop()
 
 	s.logger.Info("Starting metric collection",
-		zap.Duration("interval", s.config.Metrics.CollectionInterval),
+		zap.Duration("interval", s.config.Metrics.CollectionInterval.Duration),
 		zap.Int("collectors", len(s.collectors)),
 	)
 
@@ -177,7 +176,7 @@ func (s *Server) collectAllMetrics(ctx context.Context) {
 	start := time.Now()
 
 	// Create a timeout context for metric collection
-	collectCtx, cancel := context.WithTimeout(ctx, s.config.Metrics.CommandTimeout)
+	collectCtx, cancel := context.WithTimeout(ctx, s.config.Metrics.CommandTimeout.Duration)
 	defer cancel()
 
 	for _, collector := range s.collectors {

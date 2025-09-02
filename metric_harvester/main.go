@@ -27,6 +27,14 @@ func main() {
 				return cfg
 			},
 			utils.NewSystemCommandExecutor,
+			// Provide ServerParams
+			func(cfg *config.Config, logger *zap.Logger, executor *utils.SystemCommandExecutor) *server.ServerParams {
+				return &server.ServerParams{
+					Config:   cfg,
+					Logger:   logger,
+					Executor: executor,
+				}
+			},
 			server.New,
 			server.NewServerLifecycle,
 		),

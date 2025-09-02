@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// SystemCollector collects system metrics like CPU, memory, disk, network, and uptime
+// SystemCollector collects system metrics like CPU, memory, disk, and uptime
 type SystemCollector struct {
 	deps *CollectorDependencies
 
@@ -18,12 +18,10 @@ type SystemCollector struct {
 	// cpuUsage: system CPU usage percentage
 	// memoryUsage: system memory usage in bytes
 	// diskUsage: system disk usage in bytes
-	// networkBytes: total network bytes transferred
 	// systemUptime: system uptime in seconds. Can be used to calculate system age in days.
 	cpuUsage     *prometheus.GaugeVec
 	memoryUsage  *prometheus.GaugeVec
 	diskUsage    *prometheus.GaugeVec
-	networkBytes *prometheus.CounterVec
 	systemUptime prometheus.Gauge
 }
 
@@ -78,7 +76,6 @@ func (c *SystemCollector) Describe(ch chan<- *prometheus.Desc) {
 	c.cpuUsage.Describe(ch)
 	c.memoryUsage.Describe(ch)
 	c.diskUsage.Describe(ch)
-	c.networkBytes.Describe(ch)
 	c.systemUptime.Describe(ch)
 }
 
@@ -88,7 +85,6 @@ func (c *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 	c.cpuUsage.Collect(ch)
 	c.memoryUsage.Collect(ch)
 	c.diskUsage.Collect(ch)
-	c.networkBytes.Collect(ch)
 	c.systemUptime.Collect(ch)
 }
 
