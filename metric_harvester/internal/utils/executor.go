@@ -70,13 +70,13 @@ func (e *SystemCommandExecutor) Execute(ctx context.Context, command string, arg
 // Helper functions for common system commands
 
 func (e *SystemCommandExecutor) GetCPUUsage(ctx context.Context) ([]byte, error) {
-	// Use top command to get CPU usage on Linux
-	return e.Execute(ctx, "top", "-bn1")
+	// Use top command to get CPU usage on macOS
+	return e.Execute(ctx, "top", "-l", "1", "-n", "0")
 }
 
 func (e *SystemCommandExecutor) GetMemoryUsage(ctx context.Context) ([]byte, error) {
-	// Use free command on Linux
-	return e.Execute(ctx, "free", "-b")
+	// Use vm_stat on macOS
+	return e.Execute(ctx, "vm_stat")
 }
 
 func (e *SystemCommandExecutor) GetDockerStats(ctx context.Context, containerName string) ([]byte, error) {
