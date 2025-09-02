@@ -75,7 +75,7 @@ graph TB
     classDef monitoring fill:#e8f5e8
     
     class SYSCOL,CONCOL,NETCOL,IFACE collector
-    class OS,DOCKER,PODMAN,NET system  
+    class OS,DOCKER,PODMAN,NET system
     class CONFIG,JSON config
     class PROMETHEUS,GRAFANA monitoring
 ```
