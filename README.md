@@ -2,7 +2,7 @@
 
 A comprehensive benchmarking and security evaluation framework for comparing rootful vs rootless containers (Docker & Podman) using real workloads and system metrics.
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ```mermaid
 graph TB
@@ -44,7 +44,7 @@ graph TB
     PYTHON --> REPORTS
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -110,10 +110,9 @@ Grafana will be available at `http://localhost:3000` (admin/admin)
 ## 📊 Available Metrics
 
 ### System Metrics
-- `system_cpu_usage_percent{type="user|sys|idle"}` - CPU usage by type
-- `system_memory_usage_bytes{type="active|free|inactive"}` - Memory usage
+- `system_cpu_usage_percent{type="user|system|idle"}` - CPU usage by type
+- `system_memory_usage_bytes{type="total|used|free|available"}` - Memory usage
 - `system_disk_usage_bytes{device="...",type="used|available|total"}` - Disk usage
-- `system_network_bytes_total{interface="...",direction="rx|tx"}` - Network I/O
 - `system_uptime_seconds` - System uptime
 
 ### Container Metrics
@@ -123,35 +122,70 @@ Grafana will be available at `http://localhost:3000` (admin/admin)
 - `container_block_io_bytes{container="...",runtime="docker|podman",direction="read|write"}` - Container disk I/O
 - `container_running{container="...",runtime="docker|podman"}` - Container status
 
+### Network Metrics
+- `network_interface_rx_bytes_total{interface="..."}` - Interface received bytes
+- `network_interface_tx_bytes_total{interface="..."}` - Interface transmitted bytes
+- `network_interface_rx_packets_total{interface="..."}` - Interface received packets
+- `network_interface_tx_packets_total{interface="..."}` - Interface transmitted packets
+- `network_interface_rx_errors_total{interface="..."}` - Interface receive errors
+- `network_interface_tx_errors_total{interface="..."}` - Interface transmit errors
+- `network_interface_rx_dropped_total{interface="..."}` - Interface dropped received packets
+- `network_interface_tx_dropped_total{interface="..."}` - Interface dropped transmitted packets
+- `network_interface_up{interface="..."}` - Interface status (1=up, 0=down)
+- `network_ping_latency_milliseconds{target="..."}` - Ping latency to target
+- `network_ping_packet_loss_percent{target="..."}` - Ping packet loss percentage
+- `network_ping_reachable{target="..."}` - Target reachability (1=reachable, 0=unreachable)
+
 ## 🔧 Configuration
 
-The application can be configured by modifying the `Config` struct in `internal/config/config.go`:
+The application is configured via JSON file `internal/config/configurations.json`:
 
-```go
-type Config struct {
-    Server struct {
-        Port            string        // HTTP server port (default: ":8080")
-        ReadTimeout     time.Duration // Request read timeout
-        WriteTimeout    time.Duration // Response write timeout
-        ShutdownTimeout time.Duration // Graceful shutdown timeout
-    }
-    
-    Metrics struct {
-        CollectionInterval     time.Duration // How often to collect metrics
-        CommandTimeout         time.Duration // Timeout for system commands
-        EnableSystemMetrics    bool          // Enable system metric collection
-        EnableContainerMetrics bool          // Enable container metric collection
-        EnableNetworkMetrics   bool          // Enable network metric collection
-    }
-    
-    Containers struct {
-        DockerEnabled  bool     // Enable Docker monitoring
-        PodmanEnabled  bool     // Enable Podman monitoring
-        MonitoredNames []string // Only monitor these containers (empty = all)
-        IgnoredNames   []string // Ignore these containers
-    }
+```json
+{
+  "server": {
+    "port": ":8080",
+    "read_timeout": "10s",
+    "write_timeout": "10s", 
+    "shutdown_timeout": "30s"
+  },
+  "metrics": {
+    "collection_interval": "15s",
+    "command_timeout": "10s",
+    "enable_system_metrics": true,
+    "enable_container_metrics": true,
+    "enable_network_metrics": true
+  },
+  "containers": {
+    "docker_enabled": true,
+    "podman_enabled": true,
+    "monitored_names": [],
+    "ignored_names": []
+  },
+  "network": {
+    "ping_targets": ["8.8.8.8", "1.1.1.1", "google.com"],
+    "monitor_loopback": false,
+    "ignored_interfaces": []
+  },
+  "benchmarking": {
+    "workloads_path": "./workloads",
+    "results_path": "./results", 
+    "max_concurrency": 10,
+    "test_duration": "5m"
+  },
+  "logging": {
+    "level": "info",
+    "format": "json"
+  }
 }
 ```
+
+**Configuration Options:**
+- **Server**: HTTP server settings and timeouts
+- **Metrics**: Collection intervals and feature toggles
+- **Containers**: Docker/Podman monitoring settings and filters
+- **Network**: Ping targets and interface filtering
+- **Benchmarking**: Future benchmarking framework settings
+- **Logging**: Log level and format configuration
 
 ## 🧪 Experimental Workflows
 
@@ -225,8 +259,17 @@ avg by (runtime) (container_cpu_usage_percent)
 # Memory usage comparison
 container_memory_usage_bytes{type="used"} / container_memory_usage_bytes{type="limit"} * 100
 
-# Network I/O rate
+# Container network I/O rate
 rate(container_network_io_bytes[5m])
+
+# System network interface throughput
+rate(network_interface_rx_bytes_total[5m]) + rate(network_interface_tx_bytes_total[5m])
+
+# Network connectivity health
+avg by (target) (network_ping_reachable)
+
+# Network latency trends
+avg by (target) (network_ping_latency_milliseconds)
 ```
 
 ## 🔍 Troubleshooting
