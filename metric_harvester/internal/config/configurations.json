@@ -1,0 +1,36 @@
+{
+    "server": {
+      "port": ":8080",
+      "read_timeout": "10s",
+      "write_timeout": "10s",
+      "shutdown_timeout": "30s"
+    },
+    "metrics": {
+      "collection_interval": "15s",
+      "command_timeout": "10s",
+      "enable_system_metrics": true,
+      "enable_container_metrics": true,
+      "enable_network_metrics": true
+    },
+    "containers": {
+      "docker_enabled": true,
+      "podman_enabled": true,
+      "monitored_names": [],
+      "ignored_names": []
+    },
+    "network": {
+      "ping_targets": ["8.8.8.8", "1.1.1.1", "google.com"],
+      "monitor_loopback": false,
+      "ignored_interfaces": []
+    },
+    "benchmarking": {
+      "workloads_path": "./workloads",
+      "results_path": "./results",
+      "max_concurrency": 10,
+      "test_duration": "5m"
+    },
+    "logging": {
+      "level": "info",
+      "format": "json"
+    }
+  }

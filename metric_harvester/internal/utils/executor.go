@@ -3,15 +3,14 @@ package utils
 import (
 	"context"
 	"os/exec"
+	"strconv"
 	"strings"
-	"time"
 
 	"go.uber.org/zap"
 )
 
 type CommandExecutor interface {
 	Execute(ctx context.Context, command string, args ...string) ([]byte, error)
-	ExecuteWithTimeout(command string, timeout time.Duration, args ...string) ([]byte, error)
 
 	// System metrics methods
 	GetCPUUsage(ctx context.Context) ([]byte, error)
@@ -39,6 +38,14 @@ func NewSystemCommandExecutor(logger *zap.Logger) *SystemCommandExecutor {
 	}
 }
 
+// Execute executes a command and returns the output
+// Args:
+// - ctx: context.Context
+// - command: string
+// - args: []string
+// Returns:
+// - []byte: output of the command
+// - error: error if the command fails
 func (e *SystemCommandExecutor) Execute(ctx context.Context, command string, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, command, args...)
 
@@ -60,23 +67,16 @@ func (e *SystemCommandExecutor) Execute(ctx context.Context, command string, arg
 	return output, nil
 }
 
-func (e *SystemCommandExecutor) ExecuteWithTimeout(command string, timeout time.Duration, args ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	return e.Execute(ctx, command, args...)
-}
-
 // Helper functions for common system commands
 
 func (e *SystemCommandExecutor) GetCPUUsage(ctx context.Context) ([]byte, error) {
-	// Use top command to get CPU usage
-	return e.Execute(ctx, "top", "-l", "1", "-n", "0")
+	// Use top command to get CPU usage on Linux
+	return e.Execute(ctx, "top", "-bn1")
 }
 
 func (e *SystemCommandExecutor) GetMemoryUsage(ctx context.Context) ([]byte, error) {
-	// Use vm_stat on macOS or free on Linux
-	return e.Execute(ctx, "vm_stat")
+	// Use free command on Linux
+	return e.Execute(ctx, "free", "-b")
 }
 
 func (e *SystemCommandExecutor) GetDockerStats(ctx context.Context, containerName string) ([]byte, error) {
@@ -99,7 +99,7 @@ func (e *SystemCommandExecutor) GetNetworkStats(ctx context.Context) ([]byte, er
 }
 
 func (e *SystemCommandExecutor) PingHost(ctx context.Context, host string, count int) ([]byte, error) {
-	return e.Execute(ctx, "ping", "-c", string(rune(count)), host)
+	return e.Execute(ctx, "ping", "-c", strconv.Itoa(count), host)
 }
 
 func (e *SystemCommandExecutor) GetProcessInfo(ctx context.Context, pid string) ([]byte, error) {
