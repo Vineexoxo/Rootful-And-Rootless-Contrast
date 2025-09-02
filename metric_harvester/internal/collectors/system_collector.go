@@ -127,6 +127,10 @@ func (c *SystemCollector) CollectMetrics(ctx context.Context) error {
 	return nil
 }
 
+// collectCPUMetrics collects CPU metrics
+// This is the main function that collects all the CPU metrics
+// The commands it runs are:
+// - top -l 1 -n 0
 func (c *SystemCollector) collectCPUMetrics(ctx context.Context) error {
 	output, err := c.deps.Executor.GetCPUUsage(ctx)
 	if err != nil {
@@ -163,6 +167,10 @@ func (c *SystemCollector) collectCPUMetrics(ctx context.Context) error {
 	return nil
 }
 
+// collectMemoryMetrics collects memory metrics
+// This is the main function that collects all the memory metrics
+// The command it runs is:
+// - vm_stat
 func (c *SystemCollector) collectMemoryMetrics(ctx context.Context) error {
 	output, err := c.deps.Executor.GetMemoryUsage(ctx)
 	if err != nil {
@@ -197,6 +205,10 @@ func (c *SystemCollector) collectMemoryMetrics(ctx context.Context) error {
 	return nil
 }
 
+// collectDiskMetrics collects disk metrics
+// This is the main function that collects all the disk metrics
+// The command it runs is:
+// - df -h /
 func (c *SystemCollector) collectDiskMetrics(ctx context.Context) error {
 	output, err := c.deps.Executor.GetDiskUsage(ctx, "/")
 	if err != nil {
@@ -230,6 +242,10 @@ func (c *SystemCollector) collectDiskMetrics(ctx context.Context) error {
 	return nil
 }
 
+// collectUptimeMetrics collects uptime metrics
+// This is the main function that collects all the uptime metrics
+// The command it runs is:
+// - uptime
 func (c *SystemCollector) collectUptimeMetrics(ctx context.Context) error {
 	output, err := c.deps.Executor.GetSystemUptime(ctx)
 	if err != nil {

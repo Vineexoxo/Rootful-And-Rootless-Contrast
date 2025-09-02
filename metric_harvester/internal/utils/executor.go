@@ -69,16 +69,25 @@ func (e *SystemCommandExecutor) Execute(ctx context.Context, command string, arg
 
 // Helper functions for common system commands
 
+// GetCPUUsage gets CPU usage on macOS
+// The command it runs is:
+// - top -l 1 -n 0
 func (e *SystemCommandExecutor) GetCPUUsage(ctx context.Context) ([]byte, error) {
 	// Use top command to get CPU usage on macOS
 	return e.Execute(ctx, "top", "-l", "1", "-n", "0")
 }
 
+// GetMemoryUsage gets memory usage on macOS
+// The command it runs is:
+// - vm_stat
 func (e *SystemCommandExecutor) GetMemoryUsage(ctx context.Context) ([]byte, error) {
 	// Use vm_stat on macOS
 	return e.Execute(ctx, "vm_stat")
 }
 
+// GetDockerStats gets Docker stats
+// The command it runs is:
+// - docker stats --no-stream --format "table {{.Container}}\\t{{.CPUPerc}}\\t{{.MemUsage}}\\t{{.NetIO}}\\t{{.BlockIO}}"
 func (e *SystemCommandExecutor) GetDockerStats(ctx context.Context, containerName string) ([]byte, error) {
 	if containerName == "" {
 		return e.Execute(ctx, "docker", "stats", "--no-stream", "--format", "table {{.Container}}\\t{{.CPUPerc}}\\t{{.MemUsage}}\\t{{.NetIO}}\\t{{.BlockIO}}")
@@ -86,6 +95,9 @@ func (e *SystemCommandExecutor) GetDockerStats(ctx context.Context, containerNam
 	return e.Execute(ctx, "docker", "stats", "--no-stream", "--format", "table {{.Container}}\\t{{.CPUPerc}}\\t{{.MemUsage}}\\t{{.NetIO}}\\t{{.BlockIO}}", containerName)
 }
 
+// GetPodmanStats gets Podman stats
+// The command it runs is:
+// - podman stats --no-stream --format "table {{.Name}}\\t{{.CPUPerc}}\\t{{.MemUsage}}\\t{{.NetIO}}\\t{{.BlockIO}}"
 func (e *SystemCommandExecutor) GetPodmanStats(ctx context.Context, containerName string) ([]byte, error) {
 	if containerName == "" {
 		return e.Execute(ctx, "podman", "stats", "--no-stream", "--format", "table {{.Name}}\\t{{.CPUPerc}}\\t{{.MemUsage}}\\t{{.NetIO}}\\t{{.BlockIO}}")
@@ -93,23 +105,38 @@ func (e *SystemCommandExecutor) GetPodmanStats(ctx context.Context, containerNam
 	return e.Execute(ctx, "podman", "stats", "--no-stream", "--format", "table {{.Name}}\\t{{.CPUPerc}}\\t{{.MemUsage}}\\t{{.NetIO}}\\t{{.BlockIO}}", containerName)
 }
 
+// GetNetworkStats gets network stats
+// The command it runs is:
+// - netstat -i
 func (e *SystemCommandExecutor) GetNetworkStats(ctx context.Context) ([]byte, error) {
 	// Get network interface statistics
 	return e.Execute(ctx, "netstat", "-i")
 }
 
+// PingHost pings a host
+// The command it runs is:
+// - ping -c count host
 func (e *SystemCommandExecutor) PingHost(ctx context.Context, host string, count int) ([]byte, error) {
 	return e.Execute(ctx, "ping", "-c", strconv.Itoa(count), host)
 }
 
+// GetProcessInfo gets process info
+// The command it runs is:
+// - ps -p pid -o pid,ppid,user,cpu,mem,command
 func (e *SystemCommandExecutor) GetProcessInfo(ctx context.Context, pid string) ([]byte, error) {
 	return e.Execute(ctx, "ps", "-p", pid, "-o", "pid,ppid,user,cpu,mem,command")
 }
 
+// GetSystemUptime gets system uptime
+// The command it runs is:
+// - uptime
 func (e *SystemCommandExecutor) GetSystemUptime(ctx context.Context) ([]byte, error) {
 	return e.Execute(ctx, "uptime")
 }
 
+// GetDiskUsage gets disk usage
+// The command it runs is:
+// - df -h /
 func (e *SystemCommandExecutor) GetDiskUsage(ctx context.Context, path string) ([]byte, error) {
 	if path == "" {
 		path = "/"
