@@ -56,13 +56,6 @@ func NewSystemCollector(deps *CollectorDependencies) *SystemCollector {
 			},
 			[]string{"device", "type"}, // used, available, total
 		),
-		networkBytes: prometheus.NewCounterVec(
-			prometheus.CounterOpts{
-				Name: "system_network_bytes_total",
-				Help: "Total network bytes transferred",
-			},
-			[]string{"interface", "direction"}, // rx, tx
-		),
 		systemUptime: prometheus.NewGauge(
 			prometheus.GaugeOpts{
 				Name: "system_uptime_seconds",
