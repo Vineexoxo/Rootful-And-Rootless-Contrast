@@ -7,41 +7,77 @@ A comprehensive benchmarking and security evaluation framework for comparing roo
 ```mermaid
 graph TB
     subgraph "System Layer"
-        SYS[System Calls<br/>top, docker stats, strace<br/>ping, iperf, ss]
-        DOCKER[Docker Containers<br/>Rootful Mode]
-        PODMAN[Podman Containers<br/>Rootless Mode]
+        OS[Operating System<br/>macOS/Linux]
+        DOCKER[Docker Daemon<br/>Rootful Containers]
+        PODMAN[Podman<br/>Rootless Containers]
+        NET[Network Interfaces<br/>/proc/net/dev, ping]
     end
     
-    subgraph "Go Metric Harvester"
-        MAIN[main.go<br/>Application Entry]
-        COLLECTORS[Collectors<br/>- CPU/Memory<br/>- Container Stats<br/>- Network<br/>- Security]
-        EXECUTOR[Command Executor<br/>Execute system calls]
-        SERVER[HTTP Server<br/>:8080/metrics]
-        PROM_CLIENT[Prometheus Client<br/>Metrics Registry]
+    subgraph "Go Metric Harvester Application"
+        MAIN[main.go<br/>fx.App + Lifecycle]
+        
+        subgraph "Configuration"
+            CONFIG[config.go<br/>LoadFromJSON]
+            JSON[configurations.json<br/>JSON Config File]
+        end
+        
+        subgraph "Command Execution"
+            EXECUTOR[utils/executor.go<br/>SystemCommandExecutor]
+        end
+        
+        subgraph "Collectors"
+            SYSCOL[system_collector.go<br/>CPU, Memory, Disk, Uptime]
+            CONCOL[container_collector.go<br/>Docker/Podman Stats]
+            NETCOL[network_collector.go<br/>Interface Stats + Ping]
+            IFACE[interfaces.go<br/>Collector Interface]
+        end
+        
+        subgraph "HTTP Server"
+            SERVER[server/server.go<br/>Prometheus Registry]
+            ENDPOINTS[HTTP Endpoints<br/>/metrics, /health, /info]
+        end
     end
     
     subgraph "Monitoring Stack"
-        PROMETHEUS[Prometheus<br/>Time-series DB<br/>:9090]
-        GRAFANA[Grafana<br/>Visualization<br/>:3000]
+        PROMETHEUS[Prometheus Server<br/>:9090<br/>prometheus.yml]
+        GRAFANA[Grafana<br/>:3000<br/>Dashboards]
     end
     
-    subgraph "Analysis Layer"
-        PYTHON[Python Scripts<br/>- Query Prometheus API<br/>- Statistical Analysis<br/>- ML Predictions]
-        REPORTS[Reports & Insights<br/>- Anomaly Detection<br/>- Performance Comparison]
-    end
-    
-    SYS --> EXECUTOR
-    DOCKER --> COLLECTORS
-    PODMAN --> COLLECTORS
-    MAIN --> COLLECTORS
+    %% Data Flow
+    JSON --> CONFIG
+    CONFIG --> MAIN
     MAIN --> SERVER
-    COLLECTORS --> EXECUTOR
-    COLLECTORS --> PROM_CLIENT
-    PROM_CLIENT --> SERVER
-    SERVER -->|HTTP scrape| PROMETHEUS
+    MAIN --> SYSCOL
+    MAIN --> CONCOL  
+    MAIN --> NETCOL
+    
+    SYSCOL --> EXECUTOR
+    CONCOL --> EXECUTOR
+    NETCOL --> EXECUTOR
+    
+    EXECUTOR -->|top -l 1| OS
+    EXECUTOR -->|docker stats| DOCKER
+    EXECUTOR -->|podman stats| PODMAN
+    EXECUTOR -->|cat /proc/net/dev| NET
+    EXECUTOR -->|ping| NET
+    
+    SYSCOL --> SERVER
+    CONCOL --> SERVER
+    NETCOL --> SERVER
+    
+    ENDPOINTS -->|:8080/metrics| PROMETHEUS
     PROMETHEUS --> GRAFANA
-    PROMETHEUS -->|API queries| PYTHON
-    PYTHON --> REPORTS
+    
+    %% Styling
+    classDef collector fill:#e1f5fe
+    classDef system fill:#fff3e0
+    classDef config fill:#f3e5f5
+    classDef monitoring fill:#e8f5e8
+    
+    class SYSCOL,CONCOL,NETCOL,IFACE collector
+    class OS,DOCKER,PODMAN,NET system  
+    class CONFIG,JSON config
+    class PROMETHEUS,GRAFANA monitoring
 ```
 
 ## Quick Start
