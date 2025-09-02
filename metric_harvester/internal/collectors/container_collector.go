@@ -113,10 +113,35 @@ func (c *ContainerCollector) CollectMetrics(ctx context.Context) error {
 }
 
 // collectDockerMetrics collects Docker metrics
-// This is the main function that collects all the Docker metrics
-// The command it runs is:
-// - docker stats --no-stream --format "table {{.Container}}\\t{{.CPUPerc}}\\t{{.MemUsage}}\\t{{.NetIO}}\\t{{.BlockIO}}"
+// If MonitoredNames is specified, it gets stats only for those containers
+// Otherwise, it gets stats for all containers
 func (c *ContainerCollector) collectDockerMetrics(ctx context.Context) error {
+	// If specific containers are configured, get stats for each one
+	if len(c.deps.Config.Containers.MonitoredNames) > 0 {
+		for _, containerName := range c.deps.Config.Containers.MonitoredNames {
+			// Skip ignored containers
+			if c.isContainerIgnored(containerName) {
+				continue
+			}
+
+			output, err := c.deps.Executor.GetDockerStats(ctx, containerName)
+			if err != nil {
+				c.deps.Logger.Warn("Failed to get stats for container",
+					zap.String("container", containerName),
+					zap.Error(err))
+				continue
+			}
+
+			if err := c.parseContainerStats(string(output), "docker"); err != nil {
+				c.deps.Logger.Warn("Failed to parse stats for container",
+					zap.String("container", containerName),
+					zap.Error(err))
+			}
+		}
+		return nil
+	}
+
+	// Get stats for all containers
 	output, err := c.deps.Executor.GetDockerStats(ctx, "")
 	if err != nil {
 		return err
@@ -126,10 +151,35 @@ func (c *ContainerCollector) collectDockerMetrics(ctx context.Context) error {
 }
 
 // collectPodmanMetrics collects Podman metrics
-// This is the main function that collects all the Podman metrics
-// The command it runs is:
-// - podman stats --no-stream --format "table {{.Name}}\\t{{.CPUPerc}}\\t{{.MemUsage}}\\t{{.NetIO}}\\t{{.BlockIO}}"
+// If MonitoredNames is specified, it gets stats only for those containers
+// Otherwise, it gets stats for all containers
 func (c *ContainerCollector) collectPodmanMetrics(ctx context.Context) error {
+	// If specific containers are configured, get stats for each one
+	if len(c.deps.Config.Containers.MonitoredNames) > 0 {
+		for _, containerName := range c.deps.Config.Containers.MonitoredNames {
+			// Skip ignored containers
+			if c.isContainerIgnored(containerName) {
+				continue
+			}
+
+			output, err := c.deps.Executor.GetPodmanStats(ctx, containerName)
+			if err != nil {
+				c.deps.Logger.Warn("Failed to get stats for container",
+					zap.String("container", containerName),
+					zap.Error(err))
+				continue
+			}
+
+			if err := c.parseContainerStats(string(output), "podman"); err != nil {
+				c.deps.Logger.Warn("Failed to parse stats for container",
+					zap.String("container", containerName),
+					zap.Error(err))
+			}
+		}
+		return nil
+	}
+
+	// Get stats for all containers
 	output, err := c.deps.Executor.GetPodmanStats(ctx, "")
 	if err != nil {
 		return err
@@ -155,16 +205,6 @@ func (c *ContainerCollector) parseContainerStats(output, runtime string) error {
 		}
 
 		containerName := fields[0]
-
-		// Skip if container is in ignore list
-		if c.isIgnored(containerName) {
-			continue
-		}
-
-		// Only monitor specific containers if list is provided
-		if len(c.deps.Config.Containers.MonitoredNames) > 0 && !c.isMonitored(containerName) {
-			continue
-		}
 
 		// Parse CPU usage (e.g., "15.30%")
 		if cpuStr := strings.TrimSuffix(fields[1], "%"); cpuStr != fields[1] {
@@ -226,18 +266,10 @@ func (c *ContainerCollector) parseContainerStats(output, runtime string) error {
 	return nil
 }
 
-func (c *ContainerCollector) isIgnored(containerName string) bool {
+// isContainerIgnored checks if a container should be ignored
+func (c *ContainerCollector) isContainerIgnored(containerName string) bool {
 	for _, ignored := range c.deps.Config.Containers.IgnoredNames {
 		if containerName == ignored {
-			return true
-		}
-	}
-	return false
-}
-
-func (c *ContainerCollector) isMonitored(containerName string) bool {
-	for _, monitored := range c.deps.Config.Containers.MonitoredNames {
-		if containerName == monitored {
 			return true
 		}
 	}
