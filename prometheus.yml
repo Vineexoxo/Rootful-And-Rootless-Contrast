@@ -17,25 +17,6 @@ scrape_configs:
     scrape_interval: 15s
     metrics_path: /metrics
     scheme: http
-    
-  - job_name: 'system-metrics'
-    static_configs:
-      - targets: ['localhost:8080']
-    scrape_interval: 10s
-    metrics_path: /metrics
-    scheme: http
-    params:
-      collect[]:
-        - system_cpu_usage_percent
-        - system_memory_usage_bytes
-        - system_disk_usage_bytes
-        - system_network_bytes_total
-        - system_uptime_seconds
-        - container_cpu_usage_percent
-        - container_memory_usage_bytes
-        - container_network_io_bytes
-        - container_block_io_bytes
-        - container_running
 
 alerting:
   alertmanagers:
