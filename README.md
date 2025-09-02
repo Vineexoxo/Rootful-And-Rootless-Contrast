@@ -69,15 +69,8 @@ graph TB
     PROMETHEUS --> GRAFANA
     
     %% Styling
-    classDef collector fill:#e1f5fe
-    classDef system fill:#fff3e0
-    classDef config fill:#f3e5f5
-    classDef monitoring fill:#e8f5e8
-    
-    class SYSCOL,CONCOL,NETCOL,IFACE collector
-    class OS,DOCKER,PODMAN,NET system
-    class CONFIG,JSON config
-    class PROMETHEUS,GRAFANA monitoring
+    classDef blackBox fill:#000000,stroke:#ffffff,stroke-width:2px,color:#ffffff
+    class OS,DOCKER,PODMAN,NET,MAIN,CONFIG,JSON,EXECUTOR,SYSCOL,CONCOL,NETCOL,IFACE,SERVER,ENDPOINTS,PROMETHEUS,GRAFANA blackBox
 ```
 
 ## Quick Start
