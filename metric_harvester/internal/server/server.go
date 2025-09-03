@@ -194,29 +194,3 @@ func (s *Server) collectAllMetrics(ctx context.Context) {
 		zap.Int("collectors", len(s.collectors)),
 	)
 }
-
-// ServerLifecycle manages the server lifecycle with fx
-type ServerLifecycle struct {
-	server *Server
-	logger *zap.Logger
-}
-
-func NewServerLifecycle(server *Server, logger *zap.Logger) *ServerLifecycle {
-	return &ServerLifecycle{
-		server: server,
-		logger: logger,
-	}
-}
-
-func (sl *ServerLifecycle) Start(ctx context.Context) error {
-	go func() {
-		if err := sl.server.Start(ctx); err != nil {
-			sl.logger.Error("Server startup failed", zap.Error(err))
-		}
-	}()
-	return nil
-}
-
-func (sl *ServerLifecycle) Stop(ctx context.Context) error {
-	return sl.server.Stop(ctx)
-}

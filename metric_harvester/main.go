@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"metric_harvester/internal/config"
 	"metric_harvester/internal/server"
@@ -17,6 +18,7 @@ func main() {
 	app := fx.New(
 		// Provide dependencies
 		fx.Provide(
+			// Provide logger
 			zap.NewDevelopment,
 			// Load configuration from JSON file to config.Config
 			func() *config.Config {
@@ -26,8 +28,9 @@ func main() {
 				}
 				return cfg
 			},
+			// Provide system command executor using logger
 			utils.NewSystemCommandExecutor,
-			// Provide ServerParams
+			// Provide ServerParams using config, logger and executor
 			func(cfg *config.Config, logger *zap.Logger, executor *utils.SystemCommandExecutor) *server.ServerParams {
 				return &server.ServerParams{
 					Config:   cfg,
@@ -36,15 +39,21 @@ func main() {
 				}
 			},
 			server.New,
-			server.NewServerLifecycle,
 		),
 
 		// Invoke startup functions
 		fx.Invoke(
-			func(lifecycle fx.Lifecycle, serverLifecycle *server.ServerLifecycle) {
+			func(lifecycle fx.Lifecycle, server *server.Server) {
 				lifecycle.Append(fx.Hook{
-					OnStart: serverLifecycle.Start,
-					OnStop:  serverLifecycle.Stop,
+					OnStart: func(ctx context.Context) error {
+						go func() {
+							if err := server.Start(ctx); err != nil {
+								// Server will log the error internally
+							}
+						}()
+						return nil
+					},
+					OnStop: server.Stop,
 				})
 			},
 		),
