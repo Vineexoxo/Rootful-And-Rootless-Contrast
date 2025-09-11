@@ -190,77 +190,113 @@ func (c *ContainerCollector) collectPodmanMetrics(ctx context.Context) error {
 
 // parseContainerStats parses container stats
 // This is the main function that parses the container stats
-// Example: "CONTAINER ID   NAME               CPU %     MEM USAGE / LIMIT   MEM %     NET I/O           BLOCK I/O         PIDS"
+// Example: "artisan-agent-api   1.24%     601.9MiB / 7.654GiB   12.9kB / 6.34kB   164MB / 0B"
 func (c *ContainerCollector) parseContainerStats(output, runtime string) error {
+	c.deps.Logger.Debug("Parsing container stats",
+		zap.String("runtime", runtime),
+		zap.String("output", output))
+
 	lines := strings.Split(output, "\n")
 
 	for i, line := range lines {
 		if i == 0 || strings.TrimSpace(line) == "" {
+			c.deps.Logger.Debug("Skipping line",
+				zap.Int("line_number", i),
+				zap.String("line", line),
+				zap.String("reason", "header or empty"))
 			continue // Skip header and empty lines
 		}
 
-		fields := strings.Fields(line)
-		if len(fields) < 5 {
+		c.deps.Logger.Debug("Processing container stats line",
+			zap.Int("line_number", i),
+			zap.String("line", line))
+
+		// Use regex to parse the line properly, handling spaces within fields
+		// Format: CONTAINER   CPU%   MEM_USAGE / MEM_LIMIT   NET_RX / NET_TX   BLOCK_READ / BLOCK_WRITE
+		re := regexp.MustCompile(`^(\S+)\s+([\d.]+%)\s+([\d.]+\w+)\s+/\s+([\d.]+\w+)\s+([\d.]+\w+)\s+/\s+([\d.]+\w+)\s+([\d.]+\w+)\s+/\s+([\d.]+\w+)`)
+		matches := re.FindStringSubmatch(strings.TrimSpace(line))
+
+		c.deps.Logger.Debug("Regex parsing result",
+			zap.String("line", strings.TrimSpace(line)),
+			zap.Int("matches_count", len(matches)),
+			zap.Strings("matches", matches))
+
+		if len(matches) != 9 {
+			c.deps.Logger.Warn("Failed to parse container stats line",
+				zap.String("line", line),
+				zap.Int("expected_matches", 9),
+				zap.Int("actual_matches", len(matches)),
+				zap.Strings("matches", matches))
 			continue
 		}
 
-		containerName := fields[0]
+		containerName := matches[1]
+		cpuStr := strings.TrimSuffix(matches[2], "%")
+		memUsed := matches[3]
+		memLimit := matches[4]
+		netRx := matches[5]
+		netTx := matches[6]
+		blockRead := matches[7]
+		blockWrite := matches[8]
 
-		// Parse CPU usage (e.g., "15.30%")
-		if cpuStr := strings.TrimSuffix(fields[1], "%"); cpuStr != fields[1] {
-			if cpu, err := strconv.ParseFloat(cpuStr, 64); err == nil {
-				c.containerCPU.WithLabelValues(containerName, runtime).Set(cpu)
-				c.containerStatus.WithLabelValues(containerName, runtime).Set(1) // Running
-			}
+		c.deps.Logger.Debug("Parsed container data",
+			zap.String("container", containerName),
+			zap.String("cpu_str", cpuStr),
+			zap.String("mem_used", memUsed),
+			zap.String("mem_limit", memLimit),
+			zap.String("net_rx", netRx),
+			zap.String("net_tx", netTx),
+			zap.String("block_read", blockRead),
+			zap.String("block_write", blockWrite))
+
+		// Parse CPU usage
+		if cpu, err := strconv.ParseFloat(cpuStr, 64); err == nil {
+			c.deps.Logger.Debug("Setting CPU metric",
+				zap.String("container", containerName),
+				zap.Float64("cpu", cpu))
+			c.containerCPU.WithLabelValues(containerName, runtime).Set(cpu)
+			c.containerStatus.WithLabelValues(containerName, runtime).Set(1) // Running
+		} else {
+			c.deps.Logger.Error("Failed to parse CPU value",
+				zap.String("cpu_str", cpuStr),
+				zap.Error(err))
 		}
 
-		// Parse memory usage (e.g., "1.5GiB / 8GiB")
-		if len(fields) >= 3 {
-			memParts := strings.Split(fields[2], " / ")
-			if len(memParts) == 2 {
-				used := parseMemoryValue(strings.TrimSpace(memParts[0]))
-				limit := parseMemoryValue(strings.TrimSpace(memParts[1]))
+		// Parse memory usage
+		used := parseMemoryValue(memUsed)
+		limit := parseMemoryValue(memLimit)
+		c.deps.Logger.Debug("Setting memory metrics",
+			zap.String("container", containerName),
+			zap.String("mem_used_str", memUsed),
+			zap.Float64("mem_used_bytes", used),
+			zap.String("mem_limit_str", memLimit),
+			zap.Float64("mem_limit_bytes", limit))
+		c.containerMemory.WithLabelValues(containerName, runtime, "used").Set(used)
+		c.containerMemory.WithLabelValues(containerName, runtime, "limit").Set(limit)
 
-				if used > 0 {
-					c.containerMemory.WithLabelValues(containerName, runtime, "used").Set(used)
-				}
-				if limit > 0 {
-					c.containerMemory.WithLabelValues(containerName, runtime, "limit").Set(limit)
-				}
-			}
-		}
+		// Parse network I/O
+		rx := parseNetworkValue(netRx)
+		tx := parseNetworkValue(netTx)
+		c.deps.Logger.Debug("Setting network I/O metrics",
+			zap.String("container", containerName),
+			zap.String("net_rx_str", netRx),
+			zap.Float64("net_rx_bytes", rx),
+			zap.String("net_tx_str", netTx),
+			zap.Float64("net_tx_bytes", tx))
+		c.containerNetIO.WithLabelValues(containerName, runtime, "rx").Set(rx)
+		c.containerNetIO.WithLabelValues(containerName, runtime, "tx").Set(tx)
 
-		// Parse network I/O (e.g., "1.2MB / 850kB")
-		if len(fields) >= 4 {
-			netParts := strings.Split(fields[3], " / ")
-			if len(netParts) == 2 {
-				rx := parseByteValue(strings.TrimSpace(netParts[0]))
-				tx := parseByteValue(strings.TrimSpace(netParts[1]))
-
-				if rx > 0 {
-					c.containerNetIO.WithLabelValues(containerName, runtime, "rx").Set(rx)
-				}
-				if tx > 0 {
-					c.containerNetIO.WithLabelValues(containerName, runtime, "tx").Set(tx)
-				}
-			}
-		}
-
-		// Parse block I/O (e.g., "0B / 0B")
-		if len(fields) >= 5 {
-			blockParts := strings.Split(fields[4], " / ")
-			if len(blockParts) == 2 {
-				read := parseByteValue(strings.TrimSpace(blockParts[0]))
-				write := parseByteValue(strings.TrimSpace(blockParts[1]))
-
-				if read > 0 {
-					c.containerBlockIO.WithLabelValues(containerName, runtime, "read").Set(read)
-				}
-				if write > 0 {
-					c.containerBlockIO.WithLabelValues(containerName, runtime, "write").Set(write)
-				}
-			}
-		}
+		// Parse block I/O
+		read := parseByteValue(blockRead)
+		write := parseByteValue(blockWrite)
+		c.deps.Logger.Debug("Setting block I/O metrics",
+			zap.String("container", containerName),
+			zap.String("block_read_str", blockRead),
+			zap.Float64("block_read_bytes", read),
+			zap.String("block_write_str", blockWrite),
+			zap.Float64("block_write_bytes", write))
+		c.containerBlockIO.WithLabelValues(containerName, runtime, "read").Set(read)
+		c.containerBlockIO.WithLabelValues(containerName, runtime, "write").Set(write)
 	}
 
 	return nil
@@ -308,7 +344,7 @@ func parseMemoryValue(memStr string) float64 {
 	}
 }
 
-// parseByteValue converts byte strings like "1.2MB", "850kB" to bytes
+// parseByteValue converts byte strings like "164MB", "0B" to bytes (for block I/O)
 func parseByteValue(byteStr string) float64 {
 	re := regexp.MustCompile(`^([\d.]+)([KMGT]?B)$`)
 	matches := re.FindStringSubmatch(byteStr)
@@ -338,4 +374,40 @@ func parseByteValue(byteStr string) float64 {
 	default:
 		return 0
 	}
+}
+
+// parseNetworkValue converts network I/O strings like "12.9kB", "6.34kB" to bytes
+func parseNetworkValue(netStr string) float64 {
+	// Handle case-insensitive units for network I/O (Docker uses lowercase)
+	re := regexp.MustCompile(`^([\d.]+)([kmgtKMGT]?[bB])$`)
+	matches := re.FindStringSubmatch(netStr)
+
+	if len(matches) != 3 {
+		return 0
+	}
+
+	value, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil {
+		return 0
+	}
+
+	unit := strings.ToUpper(matches[2])
+	var result float64
+
+	switch unit {
+	case "B":
+		result = value
+	case "KB":
+		result = value * 1000
+	case "MB":
+		result = value * 1000 * 1000
+	case "GB":
+		result = value * 1000 * 1000 * 1000
+	case "TB":
+		result = value * 1000 * 1000 * 1000 * 1000
+	default:
+		result = 0
+	}
+
+	return result
 }
