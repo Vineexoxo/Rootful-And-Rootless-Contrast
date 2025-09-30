@@ -206,7 +206,7 @@ func (c *ContainerCollector) parseContainerStats(output, runtime string) error {
 				zap.String("reason", "header or empty"))
 			continue // Skip header and empty lines
 		}
-
+ 
 		c.deps.Logger.Debug("Processing container stats line",
 			zap.Int("line_number", i),
 			zap.String("line", line))

@@ -1,0 +1,15 @@
+{
+  "prometheus_url": "http://localhost:9090",
+  "rootless_container": "artisan-agent-api-rootless",
+  "rootful_container": "artisan-agent-api-rootful",
+  "time_range": "5m",
+  "metrics": {
+    "cpu_percent": {"query": "container_cpu_usage_percent", "weight": 0.4, "direction": "lower"},
+    "mem_used": {"query": "container_memory_usage_bytes{type=\"used\"}", "weight": 0.3, "direction": "lower"},
+    "net_tx": {"query": "container_network_io_bytes{direction=\"tx\"}", "weight": 0.15, "direction": "higher"},
+    "net_rx": {"query": "container_network_io_bytes{direction=\"rx\"}", "weight": 0.15, "direction": "higher"}
+  },
+  "thresholds": {"neutral": 50, "mild_rootless": 55, "strong_rootless": 60, "mild_rootful": 45, "strong_rootful": 40},
+  "output": {"path": "reports/py_scorecard.json"}
+}
+

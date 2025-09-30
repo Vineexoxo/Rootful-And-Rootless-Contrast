@@ -1,0 +1,33 @@
+# OS
+.DS_Store
+
+# Editors/IDE
+.idea/
+.vscode/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Logs
+*.log
+
+# Reports/exports
+reports/
+
+# Docker
+.docker/
+
+
