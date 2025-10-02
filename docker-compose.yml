@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: metric-harvester
     ports:
-      - "8080:8080"
+      - "8081:8080"
     volumes:
       # Mount Docker socket to monitor containers from host
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -25,7 +25,7 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     ports:
-      - "9090:9090"
+      - "9091:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
@@ -58,6 +58,17 @@ services:
     restart: unless-stopped
     depends_on:
       - prometheus
+
+  api-caller:
+    build:
+      context: ./api_caller
+      dockerfile: Dockerfile
+    container_name: api-caller
+    networks:
+      - monitoring
+    restart: unless-stopped
+    environment:
+      - CALLS_PER_LOOP=500 # You can adjust how many calls it makes per loop
 
 networks:
   monitoring:
