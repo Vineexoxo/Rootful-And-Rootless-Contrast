@@ -1,0 +1,33 @@
+# Build stage
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /app
+
+# Copy the Go module file and the source code
+COPY go.mod .
+COPY main.go .
+
+# Build the Go app
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o api-caller .
+
+# Final stage
+FROM alpine:latest
+
+# Create non-root user
+RUN addgroup -g 1000 appgroup && \
+    adduser -D -u 1000 -G appgroup appuser
+
+WORKDIR /home/appuser
+
+# Copy the pre-built binary from the builder stage and set ownership
+COPY --from=builder --chown=appuser:appgroup /app/api-caller .
+
+# Make binary executable
+RUN chmod +x api-caller
+
+# Switch to non-root user
+USER appuser
+
+# Command to run the executable
+CMD ["./api-caller"]
+

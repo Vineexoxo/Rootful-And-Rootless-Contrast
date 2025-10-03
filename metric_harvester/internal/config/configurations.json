@@ -15,7 +15,7 @@
     "containers": {
       "docker_enabled": true,
       "podman_enabled": false,
-      "monitored_names": ["artisan-agent-api", "api-caller"],
+      "monitored_names": ["artisan-agent-api", "api-caller", "api-caller-rootless"],
       "ignored_names": ["grafana", "prometheus", "metric-harvester"]
     },
     "network": {

@@ -70,6 +70,23 @@ services:
     environment:
       - CALLS_PER_LOOP=500 # You can adjust how many calls it makes per loop
 
+  api-caller-rootless:
+    build:
+      context: ./api_caller
+      dockerfile: Dockerfile.rootless
+    container_name: api-caller-rootless
+    networks:
+      - monitoring
+    restart: unless-stopped
+    environment:
+      - CALLS_PER_LOOP=500
+    # Additional security constraints for rootless mode
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: false  # Set to true if the app doesn't need write access
+
 networks:
   monitoring:
     driver: bridge
