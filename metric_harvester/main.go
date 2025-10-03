@@ -47,7 +47,8 @@ func main() {
 				lifecycle.Append(fx.Hook{
 					OnStart: func(ctx context.Context) error {
 						go func() {
-							if err := server.Start(ctx); err != nil {
+							// Use context.Background() so metric collection continues after startup
+							if err := server.Start(context.Background()); err != nil {
 								// Server will log the error internally
 							}
 						}()

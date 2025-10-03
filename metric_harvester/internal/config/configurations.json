@@ -6,20 +6,20 @@
       "shutdown_timeout": "30s"
     },
     "metrics": {
-      "collection_interval": "15s",
-      "command_timeout": "10s",
+      "collection_interval": "5s",
+      "command_timeout": "30s",
       "enable_system_metrics": true,
       "enable_container_metrics": true,
       "enable_network_metrics": true
     },
     "containers": {
       "docker_enabled": true,
-      "podman_enabled": true,
+      "podman_enabled": false,
       "monitored_names": ["artisan-agent-api", "api-caller"],
       "ignored_names": ["grafana", "prometheus", "metric-harvester"]
     },
     "network": {
-      "ping_targets": ["8.8.8.8", "1.1.1.1", "google.com"],
+      "ping_targets": [],
       "monitor_loopback": false,
       "ignored_interfaces": []
     },
