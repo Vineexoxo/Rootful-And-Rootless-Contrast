@@ -63,23 +63,27 @@ services:
     build:
       context: ./api_caller
       dockerfile: Dockerfile
-    container_name: api-caller
+    container_name: api-caller-rootful
+    ports:
+      - "8082:8080"
     networks:
       - monitoring
     restart: unless-stopped
     environment:
-      - CALLS_PER_LOOP=500 # You can adjust how many calls it makes per loop
+      - PORT=8080
 
   api-caller-rootless:
     build:
       context: ./api_caller
       dockerfile: Dockerfile.rootless
     container_name: api-caller-rootless
+    ports:
+      - "8083:8080"
     networks:
       - monitoring
     restart: unless-stopped
     environment:
-      - CALLS_PER_LOOP=500
+      - PORT=8080
     # Additional security constraints for rootless mode
     security_opt:
       - no-new-privileges:true
